@@ -24,6 +24,8 @@
 
 #include "qemu/osdep.h"
 #include <getopt.h>
+#include <time.h>
+#include <stdio.h>
 
 #include "qemu-common.h"
 #include "qemu-version.h"
@@ -443,6 +445,11 @@ static BlockBackend *img_open(bool image_opts,
                               bool quiet, bool force_share)
 {
     BlockBackend *blk;
+    time_t now = time(0);
+    struct tm * timeinfo;
+    time ( &now );
+    timeinfo = localtime ( &now );
+    printf("before img_open_file, %s, %s, time: %s",filename, fmt, asctime (timeinfo));
     if (image_opts) {
         QemuOpts *opts;
         if (fmt) {
@@ -460,6 +467,10 @@ static BlockBackend *img_open(bool image_opts,
         blk = img_open_file(filename, NULL, fmt, flags, writethrough, quiet,
                             force_share);
     }
+    now = time(0);
+    time ( &now );
+    timeinfo = localtime ( &now );
+    printf("after img_open_file, time: %s",asctime (timeinfo));
     return blk;
 }
 
