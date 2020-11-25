@@ -2059,7 +2059,7 @@ retry:
 	        c_end   = clock();
             used = difftime(c_end,c_start);
             if (used > 1000) {
-                printf("convert_co_read at byte %lld, time: % \n", sector_num * BDRV_SECTOR_SIZE, used);
+                printf("convert_co_read at byte %lld, time: %f \n", sector_num * BDRV_SECTOR_SIZE, used);
             }
             if (ret < 0) {
                 error_report("error while reading at byte %lld: %s",
