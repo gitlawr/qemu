@@ -2136,26 +2136,28 @@ static int convert_do_copy(ImgConvertState *s)
     }
 
     print_event_time("convert_do_copy start while loop");
+    printf("total sectors %ld", s->total_sectors);
     while (sector_num < s->total_sectors) {
         n = convert_iteration_sectors(s, sector_num);
         if (n < 0) {
             return n;
         }
-        print_event_time("sector done");
-        printf("sector %ld, status: %d", sector_num, s->status);
+        //print_event_time("sector done");
+        //printf("sector %ld, status: %d", sector_num, s->status);
         if (s->status == BLK_DATA || (!s->min_sparse && s->status == BLK_ZERO))
         {
             s->allocated_sectors += n;
         }
         sector_num += n;
     }
-
+    print_event_time("convert_do_copy done while loop");
     /* Do the copy */
     s->sector_next_status = 0;
     s->ret = -EINPROGRESS;
 
     print_event_time("before qemu_co_mutex_init");
     qemu_co_mutex_init(&s->lock);
+    printf("total num_coroutines %ld", s->total_sectors);
     for (i = 0; i < s->num_coroutines; i++) {
         s->co[i] = qemu_coroutine_create(convert_co_do_copy, s);
         s->wait_sector_num[i] = -1;
