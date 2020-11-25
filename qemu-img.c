@@ -2003,7 +2003,7 @@ static void coroutine_fn convert_co_do_copy(void *opaque)
     assert(index >= 0);
 
     s->running_coroutines++;
-    printf("current running_coroutines: %d", s->running_coroutines);
+    printf("current running_coroutines: %d \n", s->running_coroutines);
     buf = blk_blockalign(s->target, s->buf_sectors * BDRV_SECTOR_SIZE);
 
     while (1) {
@@ -2043,7 +2043,10 @@ static void coroutine_fn convert_co_do_copy(void *opaque)
 retry:
         copy_range = s->copy_range && s->status == BLK_DATA;
         if (status == BLK_DATA && !copy_range) {
+            printf("convert_co_read at byte %lld: \n", sector_num * BDRV_SECTOR_SIZE);
+            print_event_time("before convert_co_read");
             ret = convert_co_read(s, sector_num, n, buf);
+            print_event_time("after convert_co_read");
             if (ret < 0) {
                 error_report("error while reading at byte %lld: %s",
                              sector_num * BDRV_SECTOR_SIZE, strerror(-ret));
