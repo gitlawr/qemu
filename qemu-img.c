@@ -2071,6 +2071,7 @@ retry:
             memset(buf, 0x00, n * BDRV_SECTOR_SIZE);
         }
 
+        print_event_time("before wait_sector_num");
         if (s->wr_in_order) {
             /* keep writes in order */
             while (s->wr_offs != sector_num && s->ret == -EINPROGRESS) {
@@ -2079,7 +2080,7 @@ retry:
             }
             s->wait_sector_num[index] = -1;
         }
-
+        print_event_time("after wait_sector_num");
         if (s->ret == -EINPROGRESS) {
             if (copy_range) {
                 ret = convert_co_copy_range(s, sector_num, n);
@@ -2096,7 +2097,7 @@ retry:
                 s->ret = ret;
             }
         }
-
+        print_event_time("after convert_co_copy_range/convert_co_write");
         if (s->wr_in_order) {
             /* reenter the coroutine that might have waited
              * for this write to complete */
@@ -2114,7 +2115,7 @@ retry:
             }
         }
     }
-
+    print_event_time("after wr_in_order");
     qemu_vfree(buf);
     s->co[index] = NULL;
     s->running_coroutines--;
