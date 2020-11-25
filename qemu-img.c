@@ -2106,7 +2106,7 @@ retry:
     }
 }
 
-static void print_event_time(char *Event)
+static void print_event_time(const char *Event)
 {
     now = time(0);
     time ( &now );
