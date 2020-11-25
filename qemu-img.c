@@ -2058,7 +2058,7 @@ retry:
             ret = convert_co_read(s, sector_num, n, buf);
 	        c_end   = clock();
             used = difftime(c_end,c_start);
-            if (used > 1000) {
+            if (used > CLOCKS_PER_SEC) {
                 printf("convert_co_read at byte %lld, time: %f \n", sector_num * BDRV_SECTOR_SIZE, used);
             }
             if (ret < 0) {
