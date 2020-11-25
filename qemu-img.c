@@ -2003,6 +2003,7 @@ static void coroutine_fn convert_co_do_copy(void *opaque)
     assert(index >= 0);
 
     s->running_coroutines++;
+    printf("current running_coroutines: %d", s->running_coroutines);
     buf = blk_blockalign(s->target, s->buf_sectors * BDRV_SECTOR_SIZE);
 
     while (1) {
@@ -2136,7 +2137,7 @@ static int convert_do_copy(ImgConvertState *s)
     }
 
     print_event_time("convert_do_copy start while loop");
-    printf("total sectors %ld", s->total_sectors);
+    printf("total sectors %ld \n", s->total_sectors);
     while (sector_num < s->total_sectors) {
         n = convert_iteration_sectors(s, sector_num);
         if (n < 0) {
@@ -2157,7 +2158,7 @@ static int convert_do_copy(ImgConvertState *s)
 
     print_event_time("before qemu_co_mutex_init");
     qemu_co_mutex_init(&s->lock);
-    printf("total num_coroutines %ld", s->total_sectors);
+    printf("total num_coroutines %ld \n", s->total_sectors);
     for (i = 0; i < s->num_coroutines; i++) {
         s->co[i] = qemu_coroutine_create(convert_co_do_copy, s);
         s->wait_sector_num[i] = -1;
