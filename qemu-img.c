@@ -2106,7 +2106,7 @@ retry:
     }
 }
 
-static void print_event_time(const char *Event)
+static void print_event_time(const char *Event, ...)
 {
     now = time(0);
     time ( &now );
@@ -2135,11 +2135,14 @@ static int convert_do_copy(ImgConvertState *s)
         s->buf_sectors = s->cluster_sectors;
     }
 
+    print_event_time("convert_do_copy start while loop");
     while (sector_num < s->total_sectors) {
         n = convert_iteration_sectors(s, sector_num);
         if (n < 0) {
             return n;
         }
+        print_event_time("sector done");
+        printf("sector %d, status: %d", sector_num, s->status);
         if (s->status == BLK_DATA || (!s->min_sparse && s->status == BLK_ZERO))
         {
             s->allocated_sectors += n;
@@ -2151,17 +2154,19 @@ static int convert_do_copy(ImgConvertState *s)
     s->sector_next_status = 0;
     s->ret = -EINPROGRESS;
 
+    print_event_time("before qemu_co_mutex_init");
     qemu_co_mutex_init(&s->lock);
     for (i = 0; i < s->num_coroutines; i++) {
         s->co[i] = qemu_coroutine_create(convert_co_do_copy, s);
         s->wait_sector_num[i] = -1;
         qemu_coroutine_enter(s->co[i]);
     }
-
+    print_event_time("after qemu_co_mutex_init");
     while (s->running_coroutines) {
         main_loop_wait(false);
     }
 
+    print_event_time("before blk_pwrite_compressed");
     if (s->compressed && !s->ret) {
         /* signal EOF to align */
         ret = blk_pwrite_compressed(s->target, 0, NULL, 0);
@@ -2169,7 +2174,7 @@ static int convert_do_copy(ImgConvertState *s)
             return ret;
         }
     }
-
+    print_event_time("after blk_pwrite_compressed");
     return s->ret;
 }
 
