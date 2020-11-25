@@ -57,6 +57,8 @@
 
 time_t now;
 struct tm * timeinfo;
+time_t c_start, c_end, c_end2;
+double used, used_read, used_wait, used_copy, used_write;
 
 #define QEMU_IMG_VERSION "qemu-img version " QEMU_FULL_VERSION \
                           "\n" QEMU_COPYRIGHT "\n"
@@ -2051,13 +2053,11 @@ static void coroutine_fn convert_co_do_copy(void *opaque)
 retry:
         copy_range = s->copy_range && s->status == BLK_DATA;
         if (status == BLK_DATA && !copy_range) {
-            
-            time_t c_start, c_end;
-            double used;
-            c_start = clock(); 
+            c_end   = clock();
             ret = convert_co_read(s, sector_num, n, buf);
-	        c_end   = clock();
-            used = difftime(c_end,c_start);
+	        c_end2   = clock();
+            used = difftime(c_end2,c_end);
+            used_read +=used;
             if (used > CLOCKS_PER_SEC) {
                 printf("convert_co_read at byte %lld, time: %f \n", sector_num * BDRV_SECTOR_SIZE, used);
             }
@@ -2071,25 +2071,36 @@ retry:
             memset(buf, 0x00, n * BDRV_SECTOR_SIZE);
         }
 
-        print_event_time("before wait_sector_num");
         if (s->wr_in_order) {
+            c_end   = clock();
             /* keep writes in order */
             while (s->wr_offs != sector_num && s->ret == -EINPROGRESS) {
                 s->wait_sector_num[index] = sector_num;
                 qemu_coroutine_yield();
             }
             s->wait_sector_num[index] = -1;
+
+	        c_end2   = clock();
+            used = difftime(c_end2,c_end);
+            used_wait +=used;
         }
-        print_event_time("after wait_sector_num");
         if (s->ret == -EINPROGRESS) {
             if (copy_range) {
+                c_end   = clock();
                 ret = convert_co_copy_range(s, sector_num, n);
                 if (ret) {
                     s->copy_range = false;
                     goto retry;
                 }
+                c_end2   = clock();
+                used = difftime(c_end2,c_end);
+                used_copy +=used;
             } else {
+                c_end   = clock();
                 ret = convert_co_write(s, sector_num, n, buf, status);
+                c_end2   = clock();
+                used = difftime(c_end2,c_end);
+                used_write +=used;
             }
             if (ret < 0) {
                 error_report("error while writing at byte %lld: %s",
@@ -2097,7 +2108,6 @@ retry:
                 s->ret = ret;
             }
         }
-        print_event_time("after convert_co_copy_range/convert_co_write");
         if (s->wr_in_order) {
             /* reenter the coroutine that might have waited
              * for this write to complete */
@@ -2115,7 +2125,6 @@ retry:
             }
         }
     }
-    print_event_time("after wr_in_order");
     qemu_vfree(buf);
     s->co[index] = NULL;
     s->running_coroutines--;
@@ -2179,6 +2188,7 @@ static int convert_do_copy(ImgConvertState *s)
         main_loop_wait(false);
     }
 
+    printf("used sum up--- used_read: %f,used_copy: %f,used_wait: %f,used_write: %f \n", used_read,used_copy,used_wait,used_write);
     print_event_time("before blk_pwrite_compressed");
     if (s->compressed && !s->ret) {
         /* signal EOF to align */
@@ -2259,6 +2269,7 @@ static int img_convert(int argc, char **argv)
     bool bitmaps = false;
     int64_t rate_limit = 0;
 
+    c_start = clock(); 
     ImgConvertState s = (ImgConvertState) {
         /* Need at least 4k of zeros for sparse detection */
         .min_sparse         = 8,
