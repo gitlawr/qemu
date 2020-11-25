@@ -55,6 +55,9 @@
 #include "qemu/throttle.h"
 #include "block/throttle-groups.h"
 
+time_t now;
+struct tm * timeinfo;
+
 #define QEMU_IMG_VERSION "qemu-img version " QEMU_FULL_VERSION \
                           "\n" QEMU_COPYRIGHT "\n"
 
@@ -445,8 +448,7 @@ static BlockBackend *img_open(bool image_opts,
                               bool quiet, bool force_share)
 {
     BlockBackend *blk;
-    time_t now = time(0);
-    struct tm * timeinfo;
+    now = time(0);
     time ( &now );
     timeinfo = localtime ( &now );
     printf("before img_open_file, %s, %s, time: %s",filename, fmt, asctime (timeinfo));
@@ -2104,6 +2106,14 @@ retry:
     }
 }
 
+static void print_event_time(char *Event)
+{
+    now = time(0);
+    time ( &now );
+    timeinfo = localtime ( &now );
+    printf("%s, time: %s", Event, asctime (timeinfo));
+}
+
 static int convert_do_copy(ImgConvertState *s)
 {
     int ret, i, n;
@@ -2472,7 +2482,10 @@ static int img_convert(int argc, char **argv)
             ret = -1;
             goto out;
         }
+
+        print_event_time("before blk_nb_sectors");
         s.src_sectors[bs_i] = blk_nb_sectors(s.src[bs_i]);
+        print_event_time("after blk_nb_sectors");
         if (s.src_sectors[bs_i] < 0) {
             error_report("Could not get size of %s: %s",
                          argv[optind + bs_i], strerror(-s.src_sectors[bs_i]));
@@ -2509,7 +2522,7 @@ static int img_convert(int argc, char **argv)
         ret = -1;
         goto out;
     }
-
+    print_event_time("before skip_create");
     if (!skip_create) {
         /* Find driver and parse its options */
         drv = bdrv_find_format(out_fmt);
@@ -2560,6 +2573,7 @@ static int img_convert(int argc, char **argv)
         }
     }
 
+    print_event_time("after skip_create");
     /* Get backing file name if -o backing_file was used */
     out_baseimg_param = qemu_opt_get(opts, BLOCK_OPT_BACKING_FILE);
     if (out_baseimg_param) {
@@ -2733,6 +2747,7 @@ static int img_convert(int argc, char **argv)
         s.target_backing_sectors = -1;
     }
 
+    print_event_time("before bdrv_get_info");
     ret = bdrv_get_info(out_bs, &bdi);
     if (ret < 0) {
         if (s.compressed) {
@@ -2743,17 +2758,21 @@ static int img_convert(int argc, char **argv)
         s.compressed = s.compressed || bdi.needs_compressed_writes;
         s.cluster_sectors = bdi.cluster_size / BDRV_SECTOR_SIZE;
     }
+    print_event_time("after bdrv_get_info");
 
     if (rate_limit) {
         set_rate_limit(s.target, rate_limit);
     }
 
+    print_event_time("before convert_do_copy");
     ret = convert_do_copy(&s);
+    print_event_time("after convert_do_copy");
 
     /* Now copy the bitmaps */
     if (bitmaps && ret == 0) {
         ret = convert_copy_bitmaps(blk_bs(s.src[0]), out_bs);
     }
+    print_event_time("after convert_copy_bitmaps");
 
 out:
     if (!ret) {
