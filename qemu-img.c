@@ -2051,10 +2051,16 @@ static void coroutine_fn convert_co_do_copy(void *opaque)
 retry:
         copy_range = s->copy_range && s->status == BLK_DATA;
         if (status == BLK_DATA && !copy_range) {
-            printf("convert_co_read at byte %lld: \n", sector_num * BDRV_SECTOR_SIZE);
-            print_event_time("before convert_co_read");
+            
+            time_t c_start, c_end;
+            double used;
+            c_start = clock(); 
             ret = convert_co_read(s, sector_num, n, buf);
-            print_event_time("after convert_co_read");
+	        c_end   = clock();
+            used = difftime(c_end,c_start);
+            if (used > 1000) {
+                printf("convert_co_read at byte %lld, time: % \n", sector_num * BDRV_SECTOR_SIZE, used);
+            }
             if (ret < 0) {
                 error_report("error while reading at byte %lld: %s",
                              sector_num * BDRV_SECTOR_SIZE, strerror(-ret));
