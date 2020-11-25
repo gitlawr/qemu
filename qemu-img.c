@@ -2142,7 +2142,7 @@ static int convert_do_copy(ImgConvertState *s)
             return n;
         }
         print_event_time("sector done");
-        printf("sector %d, status: %d", sector_num, s->status);
+        printf("sector %ld, status: %ld", sector_num, s->status);
         if (s->status == BLK_DATA || (!s->min_sparse && s->status == BLK_ZERO))
         {
             s->allocated_sectors += n;
