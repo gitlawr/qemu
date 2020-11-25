@@ -125,6 +125,14 @@ static void QEMU_NORETURN unrecognized_option(const char *option)
     error_exit("unrecognized option '%s'", option);
 }
 
+static void print_event_time(const char *Event, ...)
+{
+    now = time(0);
+    time ( &now );
+    timeinfo = localtime ( &now );
+    printf("%s, time: %s", Event, asctime (timeinfo));
+}
+
 /* Please keep in synch with docs/tools/qemu-img.rst */
 static void QEMU_NORETURN help(void)
 {
@@ -2108,14 +2116,6 @@ retry:
         /* the convert job finished successfully */
         s->ret = 0;
     }
-}
-
-static void print_event_time(const char *Event, ...)
-{
-    now = time(0);
-    time ( &now );
-    timeinfo = localtime ( &now );
-    printf("%s, time: %s", Event, asctime (timeinfo));
 }
 
 static int convert_do_copy(ImgConvertState *s)
